@@ -1,6 +1,7 @@
 ---
 title: workbench只导出数据（含insert语句）
 date: 2016-08-27 20:28:28
+categories: mysql
 tags: [mysql,workbench,ubuntu,数据,数据库]
 ---
 

@@ -6,7 +6,7 @@
 title: Norman | 技术博客
 subtitle: 荟萃，探索，蓄力，拼搏
 description: 一个有思想的程序员
-author: 胡龙
+author: Norman
 language: zh-Hans
 email: hulong717@gmail.com
 timezone:
@@ -29,7 +29,7 @@ i18n_dir: :lang
 skip_render:
 
 # Writing
-new_post_name: :title.md # File name of new posts
+new_post_name: :year/:month/:title.md # File name of new posts
 default_layout: post
 titlecase: false # Transform title into titlecase
 external_link: true # Open external links in new tab
