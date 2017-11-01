@@ -7,7 +7,7 @@ tags: [Java, 线程池, IO, Socket, ThreadPool]
 
 ## 背景
 
-上篇文章([一文带你进入Java之ThreadPool](http://hlong.me/2017/01/19/Java-ThreadPool.html))基本上介绍了Java中的线程池的类型，以及如何按照业务不同自定义线程池。那么问题来了，池建好了，如何让它运行起来呢？本文主要围绕这一主题——让线程池跑起来，进行测试！ 
+上篇文章([一文带你进入Java之ThreadPool](http://hulong.me/2017/01/19/Java-ThreadPool.html))基本上介绍了Java中的线程池的类型，以及如何按照业务不同自定义线程池。那么问题来了，池建好了，如何让它运行起来呢？本文主要围绕这一主题——让线程池跑起来，进行测试！ 
 <!--more-->
 ## 测试内容
 
