@@ -236,9 +236,9 @@ alipay: /images/zfb-sm.png
 # ---------------------------------------------------------------
 
 # MathJax Support
-mathjax:
-  enable: true
-  cdn: //cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+#mathjax:
+#  enable: true
+#  cdn: //cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML
 
 
 # Swiftype Search API Key
