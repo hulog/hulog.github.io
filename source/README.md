@@ -20,5 +20,6 @@
 6. 执行`npm install` 生成**node module**文件夹
 7. `hexo new "title"`发布新文章。
 8. `hexo clean` -> `hexo s -g` -> `hexo d` 
+9. ` hexo clean -> hexo g && gulp -> hexo s -> hexo d` (打包优化)
 
 ps: commit信息中的emoji [点我](https://www.webpagefx.com/tools/emoji-cheat-sheet/)
