@@ -1,0 +1,907 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="线程池,java,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Norman | 技术博客" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1">
+
+
+
+
+
+
+<meta name="description" content="1.简介 　　在计算机程序设计中，线程池是一个在计算机程序中实现并发执行的软件设计模式。一个线程池保持多个线程等待任务分配给并发执行的监督程序。通过维护一个线程池的模型，提高性能，例如，对于执行时间较短的任务，避免了由于频繁创建和销毁线程造成的系统消耗。——维基百科">
+<meta name="keywords" content="线程池,java">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一文带你进入Java之ThreadPool">
+<meta property="og:url" content="http://yoursite.com/2017/01/19/Java-ThreadPool.html">
+<meta property="og:site_name" content="Norman | 技术博客">
+<meta property="og:description" content="1.简介 　　在计算机程序设计中，线程池是一个在计算机程序中实现并发执行的软件设计模式。一个线程池保持多个线程等待任务分配给并发执行的监督程序。通过维护一个线程池的模型，提高性能，例如，对于执行时间较短的任务，避免了由于频繁创建和销毁线程造成的系统消耗。——维基百科">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://upload-images.jianshu.io/upload_images/2803944-443efc5a7ea3facb.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:updated_time" content="2019-06-22T11:37:16.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="一文带你进入Java之ThreadPool">
+<meta name="twitter:description" content="1.简介 　　在计算机程序设计中，线程池是一个在计算机程序中实现并发执行的软件设计模式。一个线程池保持多个线程等待任务分配给并发执行的监督程序。通过维护一个线程池的模型，提高性能，例如，对于执行时间较短的任务，避免了由于频繁创建和销毁线程造成的系统消耗。——维基百科">
+<meta name="twitter:image" content="http://upload-images.jianshu.io/upload_images/2803944-443efc5a7ea3facb.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 6323165598658332000,
+      author: '博主大大'
+    }
+  };
+</script>
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/01/19/Java-ThreadPool.html">
+
+  <title> 一文带你进入Java之ThreadPool | Norman | 技术博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?f26c2b39087533cee5e3181bc162b001";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=58133089";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <div style="display: none;">
+    <script src="http://s95.cnzz.com/z_stat.php?id=1260231882&web_id=1260231882" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Norman | 技术博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">荟萃，探索，蓄力，拼搏</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                一文带你进入Java之ThreadPool
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-01-19T23:10:21+08:00" content="2017-01-19">
+              2017-01-19
+            </time>
+          </span>
+
+          
+            <span class="post-category">
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/01/19/Java-ThreadPool.html#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/01/19/Java-ThreadPool.html" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+              &nbsp; | &nbsp;
+              <span class="page-pv"><i class="fa fa-file-o"></i>
+              <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+              </span>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="1-简介"><a href="#1-简介" class="headerlink" title="1.简介"></a>1.简介</h2><blockquote>
+<p>　　在计算机程序设计中，线程池是一个在计算机程序中实现并发执行的软件设计模式。一个线程池保持多个线程等待任务分配给并发执行的监督程序。通过维护一个线程池的模型，提高性能，例如，对于执行时间较短的任务，避免了由于频繁创建和销毁线程造成的系统消耗。——<a href="https://en.wikipedia.org/wiki/Thread_pool" target="_blank" rel="noopener">维基百科</a></p>
+</blockquote>
+<a id="more"></a>
+<p>　　<strong>个人理解：</strong>线程池就相当于一个处理任务的线程工厂，里面有很多工人（线程），当任务来了的时候，可以让工人立即开始工作（线程执行），当任务处理完了，则可以让工人休息（sleep）。所以，处理任务时，我们不用花时间单独去外面请工人（线程的创建），完事后不用辞退工人（线程的销毁），在任务量比较庞大的时候，能够显著的提高系统的处理能力。</p>
+<p>　　其作用总结如下：</p>
+<ol>
+<li>控制和管理线程；</li>
+<li>显著减少CPU闲置时间；</li>
+<li>提升吞吐能力。</li>
+</ol>
+<p><em><code>tips</code>:本讲的线程池主要是针对Java自带的java.util.concurrent包</em>。</p>
+<h2 id="2-使用场景"><a href="#2-使用场景" class="headerlink" title="2.使用场景"></a>2.使用场景</h2><p>那什么时候可以考虑上线程池呢？首先，对于线程，可以粗略的分为三个周期：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">T<sub>1</sub></th>
+<th style="text-align:center">T<sub>2</sub></th>
+<th style="text-align:center">T<sub>3</sub></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">线程创建</td>
+<td style="text-align:center">线程执行</td>
+<td style="text-align:center">线程销毁</td>
+</tr>
+</tbody>
+</table>
+<p>当<strong>T<sub>1</sub>+T<sub>3</sub>&gt;&gt;T<sub>2</sub></strong>时，可以考虑上线程池。对于如何估算各个周期的执行时间，可以粗略分析是否是CPU密集型任务，如果不是，举个极端例子：求1+1=?，那么线程执行周期T<sub>2</sub>就明显很短，创建和销毁时间远大于执行时间。此时就可以考虑上线程池了。</p>
+<p>那么，很多童鞋会有个疑惑，线程池与<code>new Thread()</code>有什么区别呢？线程池的好处在于：</p>
+<ol>
+<li>重用存在的线程，减少对象创建、消亡的开销，性能佳。</li>
+<li>可有效控制最大并发线程数，提高系统资源的使用率，同时避免过多资源竞争，避免堵塞。</li>
+<li>提供定时执行、定期执行、单线程、并发数控制等功能。</li>
+</ol>
+<p>相反，<code>new Thread()</code>方法只是单纯的创建线程，注重单个线程本身。当启动多个线程时，需循环调用<code>new Thread()</code>方法，耗费大量时间在创建和销毁线程上。</p>
+<h2 id="3-重要组成部分（类）"><a href="#3-重要组成部分（类）" class="headerlink" title="3. 重要组成部分（类）"></a>3. 重要组成部分（类）</h2><p>Java中线程池的顶级接口是<code>Executor</code>，里面<code>只</code>提供了一个方法<code>void execute(Runnable command);</code>,可以看出来它只是提供了一个线程执行的工具类，所以我们更认同地将其子类<code>ExecutorService</code>视为线程池真正的接口。</p>
+<p><img src="http://upload-images.jianshu.io/upload_images/2803944-443efc5a7ea3facb.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="线程池相关类"></p>
+<p>具体介绍下面继续，废话不多说，赶紧的先建个线程池出来溜溜～～～<br>创建线程池的方法有很多种，我们快马加鞭，来个最省事儿的，傻瓜式的创建线程池，不得不先提出<code>Executors</code>类（注意带<code>s</code>），本类为创建线程池的工具类（了解Java集合的童鞋，可以类比<code>Collections</code>类与<code>Collection</code>接口）。</p>
+<h3 id="3-1-Executors类"><a href="#3-1-Executors类" class="headerlink" title="3.1 Executors类"></a>3.1 Executors类</h3><p>该类提供了创建线程池的方法，比较常用的如下：</p>
+<ol>
+<li><code>newSingleThreadExecutor();</code></li>
+<li><code>newFixedThreadPool(int nThreads);</code></li>
+<li><code>newCachedThreadPool();</code></li>
+<li><code>newScheduledThreadPool(int corePoolSize);</code></li>
+</ol>
+<p>以上方法都会返回一个线程池，只是各自的功能不一样，下面分别介绍各自的实现和使用场景。</p>
+<h4 id="3-1-1-newSingleThreadExecutor"><a href="#3-1-1-newSingleThreadExecutor" class="headerlink" title="3.1.1 newSingleThreadExecutor();"></a>3.1.1 newSingleThreadExecutor();</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ExecutorService <span class="title">newSingleThreadExecutor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> FinalizableDelegatedExecutorService</span><br><span class="line">          (<span class="keyword">new</span> ThreadPoolExecutor(<span class="number">1</span>, <span class="number">1</span>,</span><br><span class="line">                                    <span class="number">0L</span>, TimeUnit.MILLISECONDS,</span><br><span class="line">                                    <span class="keyword">new</span> LinkedBlockingQueue&lt;Runnable&gt;()));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>创建一个单线程的线程池，池中保持单个线程串行执行任务，如果线程因异常结束，则会创建一个新的线程来替代它，可以保证所有任务的执行顺序按照任务的提交顺序执行。</p>
+<h4 id="3-1-2-newFixedThreadPool-int-nThreads"><a href="#3-1-2-newFixedThreadPool-int-nThreads" class="headerlink" title="3.1.2 newFixedThreadPool(int nThreads)"></a>3.1.2 newFixedThreadPool(int nThreads)</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ExecutorService <span class="title">newFixedThreadPool</span><span class="params">(<span class="keyword">int</span> nThreads)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ThreadPoolExecutor(nThreads, nThreads,</span><br><span class="line">                                  <span class="number">0L</span>, TimeUnit.MILLISECONDS,</span><br><span class="line">                                  <span class="keyword">new</span> LinkedBlockingQueue&lt;Runnable&gt;());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>创建一个固定大小可重用线程的线程池，任何时候，顶多有nThreads个线程处于活跃状态执行任务。当nThreads个线程满负荷运转时，新增的任务会加到无界队列里等候，直到有空闲线程来处理。当线程因异常退出后，会创建一个新线程来替代。在某个线程被显式地关闭之前，池中的线程将一直存在。</p>
+<h4 id="3-1-3-newCachedThreadPool"><a href="#3-1-3-newCachedThreadPool" class="headerlink" title="3.1.3 newCachedThreadPool();"></a>3.1.3 newCachedThreadPool();</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ExecutorService <span class="title">newCachedThreadPool</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ThreadPoolExecutor(<span class="number">0</span>, Integer.MAX_VALUE,</span><br><span class="line">                                  <span class="number">60L</span>, TimeUnit.SECONDS,</span><br><span class="line">                                  <span class="keyword">new</span> SynchronousQueue&lt;Runnable&gt;());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>创建一个可根据需要创建新线程的线程池，优先重用已创建的可用的线程，该线程池可以显著的提高程序的性能。当没有可用的线程时，则会在池中创建新的线程。当线程没有被使用超过60s，则会从池中remove掉，最低数量为0。因此，长时间保持空闲的线程池不会消耗任何资源。但是，当出现新任务时，又要创建一新的工作线程，又要一定的系统开销。并且，在使用CachedThreadPool时，一定要注意控制任务的数量，否则，由于大量线程同时运行，很有会造成系统瘫痪。可以使用<code>ThreadPoolExecutor</code>构造方法（<strong>后文会重点讲到</strong>）创建具有类似属性但细节不同（例如超时参数）的线程池。</p>
+<h4 id="3-1-4-newScheduledThreadPool-int-corePoolSize"><a href="#3-1-4-newScheduledThreadPool-int-corePoolSize" class="headerlink" title="3.1.4 newScheduledThreadPool(int corePoolSize);"></a>3.1.4 newScheduledThreadPool(int corePoolSize);</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> ScheduledExecutorService <span class="title">newScheduledThreadPool</span><span class="params">(<span class="keyword">int</span> corePoolSize)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ScheduledThreadPoolExecutor(corePoolSize);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ScheduledThreadPoolExecutor</span></span></span><br><span class="line"><span class="class">    <span class="keyword">extends</span> <span class="title">ThreadPoolExecutor</span></span></span><br><span class="line"><span class="class">    <span class="keyword">implements</span> <span class="title">ScheduledExecutorService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//ScheduledThreadPoolExecutor类的构造方法，其余方法和变量略</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ScheduledThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(corePoolSize, Integer.MAX_VALUE, <span class="number">0</span>, TimeUnit.NANOSECONDS,</span><br><span class="line">              <span class="keyword">new</span> DelayedWorkQueue());</span><br><span class="line">    &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>创建一个能在指定时间后或周期性地执行任务的线程池，池中会保持corePoolSize个线程，即使处于空闲状态。</p>
+<h3 id="3-2-ThreadPoolExecutor类"><a href="#3-2-ThreadPoolExecutor类" class="headerlink" title="3.2 ThreadPoolExecutor类"></a>3.2 ThreadPoolExecutor类</h3><p>可以看出，上面四种线程池都基本上是基于<code>ThreadPoolExecutor</code>和<code>ScheduledThreadPoolExecutor</code>来实现的。在此，我们主要讲解前者，了解其构造函数的各个参数的实际意义。</p>
+<p>一切没有源码的解释都是耍流氓。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">int</span> maximumPoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">long</span> keepAliveTime,</span></span></span><br><span class="line"><span class="function"><span class="params">                          TimeUnit unit,</span></span></span><br><span class="line"><span class="function"><span class="params">                          BlockingQueue&lt;Runnable&gt; workQueue,</span></span></span><br><span class="line"><span class="function"><span class="params">                          ThreadFactory threadFactory,</span></span></span><br><span class="line"><span class="function"><span class="params">                          RejectedExecutionHandler handler)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span> ||</span><br><span class="line">        maximumPoolSize &lt;= <span class="number">0</span> ||</span><br><span class="line">        maximumPoolSize &lt; corePoolSize ||</span><br><span class="line">        keepAliveTime &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">    <span class="keyword">if</span> (workQueue == <span class="keyword">null</span> || threadFactory == <span class="keyword">null</span> || handler == <span class="keyword">null</span>)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">    <span class="keyword">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">    <span class="keyword">this</span>.maximumPoolSize = maximumPoolSize;</span><br><span class="line">    <span class="keyword">this</span>.workQueue = workQueue;</span><br><span class="line">    <span class="keyword">this</span>.keepAliveTime = unit.toNanos(keepAliveTime);</span><br><span class="line">    <span class="keyword">this</span>.threadFactory = threadFactory;</span><br><span class="line">    <span class="keyword">this</span>.handler = handler;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<table>
+<thead>
+<tr>
+<th>参数名</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>corePoolSize</code></td>
+<td>线程池维护的核心线程数量。当超过这个范围的时候，就需要将新的Runnable放入到等待队列workQueue中了</td>
+</tr>
+<tr>
+<td><code>maximumPoolSize</code></td>
+<td>线程池维护的最大线程数量。如果队列满了，并且已创建的线程数小于最大线程数，则线程池会再创建新的线程执行任务。如果使用了无界的<code>workQueue</code>任务队列这个参数就没效果</td>
+</tr>
+<tr>
+<td><code>keepAliveTime</code></td>
+<td>线程池中超过<code>corePoolSize</code>的线程的存活时间</td>
+</tr>
+<tr>
+<td><code>unit</code></td>
+<td><code>keepAliveTime</code>的时间单位</td>
+</tr>
+<tr>
+<td><code>workQueue</code></td>
+<td>线程池所使用的缓冲队列。用于保存等待执行的任务，常见的队列有<code>ArrayBlockingQueue</code>，<code>LinkedBlockingQueue</code>和<code>SynchronousQueue</code>(<em>区别见<strong>注1</strong></em>)</td>
+</tr>
+<tr>
+<td><code>threadFactory</code></td>
+<td>创建新线程所使用的线程工厂。可以通过线程工厂给每个创建出来的线程设置自定义名字，主要实现newThread方法即可</td>
+</tr>
+<tr>
+<td><code>handler</code></td>
+<td>参数<code>maximumPoolSize</code>达到后丢弃处理的方法，常见的策略有<code>AbortPolicy</code>，<code>CallerRunsPolicy</code>，<code>DiscardOldestPolicy</code>和<code>DiscardPolicy</code>(<em>区别见<strong>注2</strong></em>)。可以根据应用场景需要来实现RejectedExecutionHandler接口的rejectedExecution方法，来实现自定义策略，如记录日志或持久化不能处理的任务</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>注1</strong>：<ol>
+<li><code>ArrayBlockingQueue</code>: 基于数组的有界队列。有助于防止资源耗尽，但较难控制大小，需要考虑池大小和队列的大小的折衷，大型池小型队列cpu使用率较高，但是请求量很大时，可能遇到不可接受的调度开销。小型池大型队列会降低cpu使用率，避免频繁的线程切换导致的系统消耗，但处理速率也就下降了。值得注意的是，在生产者放入数据和消费者获取数据，都是共用同一个锁对象，由此也意味着两者无法真正并行运行，这点尤其不同于LinkedBlockingQueue。</li>
+<li><code>LinkedBlockingQueue</code>: 基于链表的“无界”队列。实际上具有<em>类似无限大小</em>的容量(Integer.MAX_VALUE)，也可以在构造函数中指定大小。LinkedBlockingQueue之所以能够高效的处理并发数据，还因为其对于生产者端和消费者端分别采用了独立的锁来控制数据同步，这也意味着在高并发的情况下生产者和消费者可以并行地操作队列中的数据，以此来提高整个队列的并发性能。</li>
+<li><code>SynchronousQueue</code>: 无缓冲的等待队列，类似于无中介的直接交易，其特点是读取交替完成，没有实际容量，它将任务直接提交。对于SynchronousQueue的作用jdk中写的很清楚：此策略可以避免在处理可能具有内部依赖性的请求集时出现锁。举个例子，如果你的任务A<sub>1</sub>，A<sub>2</sub>有内部关联，A<sub>1</sub>需要先运行，那么先提交A<sub>1</sub>，再提交A<sub>2</sub>，当使用SynchronousQueue我们可以保证，A<sub>1</sub>必定先被执行，在A<sub>1</sub>没有被执行前，A<sub>2</sub>不可能添加入queue中。</li>
+</ol>
+</li>
+<li><strong>注2</strong>：<ol>
+<li><code>AbortPolicy</code> : java默认，抛出一个异常：RejectedExecutionException。</li>
+<li><code>CallerRunsPolicy</code> : 如果发现线程池还在运行，就直接运行这个线程的run()方法。</li>
+<li><code>DiscardOldestPolicy</code> : 在线程池的等待队列中，将队首任务抛弃，使用当前任务来替换。</li>
+<li><code>DiscardPolicy</code> : 什么也不做。</li>
+</ol>
+</li>
+</ul>
+<p>这一块不清楚的可以参看<a href="http://segmentfault.com/a/1190000000394999?utm_source=tuicool&amp;utm_medium=referral" target="_blank" rel="noopener">Java线程池架构(一)原理和源码解析</a></p>
+<p><em>tips：下面就是我看完某篇博文收到启发，举一个经典的例子，大家可以按照这个思路去理解。</em></p>
+<p>把线程池理解成一个医院，在医院成立之初，医生数量为 <strong>0</strong>，当有患者时，没有医生来诊疗患者，医院会去招聘新的医生，一旦这些医生忙不过来时，继续招聘，直到达到<code>corePoolSize</code>数量，停止招聘。此时的<code>corePoolSize</code>个医生为正式员工，即使没有患者，也不会辞退他们（<em>销毁线程</em>）。</p>
+<p>医生达到<code>corePoolSize</code>后，当有新患者来就诊，医生忙不过来时，直接让他们在候诊区（<code>workQueue</code>）取号等候，当医生看完上一个病人时，会去候诊区叫下一个号进去，如果没有患者，则可以休息。</p>
+<p>当患者数量急剧上升，候诊区座位数不够了，这时，医院会再去招聘临时工医生，这些临时工医生会让没有座位的患者立即就诊，医院按需求逐个招聘，直到达到<code>maximumPoolSize</code>数量，停止招聘。</p>
+<p>当临时招聘的医生长时间（<code>keepAliveTime</code>）处于空闲状态时，医院就会解雇他们，毕竟要额外付工资啊～</p>
+<h2 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h2><p><strong>综上</strong>，文中提到创建线程池的方式有两种:</p>
+<ol>
+<li><p>通过Executors类提供的静态工厂方法，例如：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecutorService es = Executors.newFixedThreadPool(nThreads);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>通过ThreadPoolExecutor来构造，例如：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ExecutorService es =</span><br><span class="line">    <span class="keyword">new</span> ThreadPoolExecutor(corePoolSize,maximumPoolSize,</span><br><span class="line">        keepAliveTime,timeUnit,workQueue);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>其中，如果没有特殊要求，使用第一种方法可以快速构建出线程池。如果根据业务不同，需要自定义线程池，第二种方法将给你充分的发挥空间。</p>
+<p>下篇博文将会利用线程池基于Socket实现<strong>客户端-&gt;服务器</strong>文件的传输，将会有大量实例代码。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/uploads/wechat-qcode.jpg" alt="Norman wechat" style="width: 200px; max-width: 100%;">
+    <div>欢迎您扫一扫上面的微信公众号，订阅我的博客！</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>坚持原创技术分享，您的支持将鼓励我继续写作！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wx.jpg" alt="Norman WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/zfb-sm.png" alt="Norman Alipay">
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/线程池/" rel="tag"><i class="fa fa-tag"></i>线程池</a>
+          
+            <a href="/tags/java/" rel="tag"><i class="fa fa-tag"></i>java</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/08/27/workbench-output.html" rel="next" title="workbench只导出数据（含insert语句）">
+                <i class="fa fa-chevron-left"></i> workbench只导出数据（含insert语句）
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/02/09/Recieve-File-Via-Threadpool.html" rel="prev" title="服务器基于ThreadPool接收文件">
+                服务器基于ThreadPool接收文件 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2017/01/19/Java-ThreadPool.html" data-title="一文带你进入Java之ThreadPool" data-url="http://yoursite.com/2017/01/19/Java-ThreadPool.html">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="Norman">
+          <p class="site-author-name" itemprop="name">Norman</p>
+          <p class="site-description motion-element" itemprop="description">一个有思想的程序员</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/hulog/" target="_blank" title="github">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  github
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/normanjiangnan/" target="_blank" title="weibo">
+                  
+                    <i class="fa fa-fw fa-weibo"></i>
+                  
+                  weibo
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.jiangnan.edu.cn/" title="江南大学" target="_blank">江南大学</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.lixiaolin.me/" title="lixiaolin" target="_blank">lixiaolin</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.codertian.com/" title="codertian" target="_blank">codertian</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://blog.csdn.net/jthink_" title="JThink" target="_blank">JThink</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-简介"><span class="nav-number">1.</span> <span class="nav-text">1.简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-使用场景"><span class="nav-number">2.</span> <span class="nav-text">2.使用场景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-重要组成部分（类）"><span class="nav-number">3.</span> <span class="nav-text">3. 重要组成部分（类）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Executors类"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 Executors类</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-1-newSingleThreadExecutor"><span class="nav-number">3.1.1.</span> <span class="nav-text">3.1.1 newSingleThreadExecutor();</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-2-newFixedThreadPool-int-nThreads"><span class="nav-number">3.1.2.</span> <span class="nav-text">3.1.2 newFixedThreadPool(int nThreads)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-3-newCachedThreadPool"><span class="nav-number">3.1.3.</span> <span class="nav-text">3.1.3 newCachedThreadPool();</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-4-newScheduledThreadPool-int-corePoolSize"><span class="nav-number">3.1.4.</span> <span class="nav-text">3.1.4 newScheduledThreadPool(int corePoolSize);</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-ThreadPoolExecutor类"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 ThreadPoolExecutor类</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-总结"><span class="nav-number">4.</span> <span class="nav-text">4. 总结</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Norman</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+        
+
+<div class="busuanzi-count">
+
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv"><i class="fa fa-user"></i><span class="busuanzi-value" id="busuanzi_value_site_uv"></span></span>
+  
+
+  
+    <span class="site-pv"><i class="fa fa-eye"></i><span class="busuanzi-value" id="busuanzi_value_site_pv"></span></span>
+  
+  
+</div>
+
+
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"hulong"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsById('footer')
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    <script src="/vendors/ua-parser-js/dist/ua-parser.min.js?v=0.7.9"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

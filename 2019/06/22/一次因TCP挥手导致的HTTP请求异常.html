@@ -1,0 +1,817 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Socket,tcp,tcpdump,http,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Norman | 技术博客" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1">
+
+
+
+
+
+
+<meta name="description" content="线上业务需要http需要和多个上游交互，使用httpclient包装的请求类，通过日志扫描系统的异常（grep），发现到达某个上游的请求，每天都会有几次异常，导致请求失败，同时抛出 NoHTTPResponseException！通过Apache官方文档，目测是因为服务端过于拥挤导致连接未响应，直接被丢弃了，后经询问，服务器此时的QPS并不高 因为是服务器之前频繁的通信，所以最好使用长连接，htt">
+<meta name="keywords" content="Socket,tcp,tcpdump,http">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一次因TCP挥手导致的HTTP请求异常">
+<meta property="og:url" content="http://yoursite.com/2019/06/22/一次因TCP挥手导致的HTTP请求异常.html">
+<meta property="og:site_name" content="Norman | 技术博客">
+<meta property="og:description" content="线上业务需要http需要和多个上游交互，使用httpclient包装的请求类，通过日志扫描系统的异常（grep），发现到达某个上游的请求，每天都会有几次异常，导致请求失败，同时抛出 NoHTTPResponseException！通过Apache官方文档，目测是因为服务端过于拥挤导致连接未响应，直接被丢弃了，后经询问，服务器此时的QPS并不高 因为是服务器之前频繁的通信，所以最好使用长连接，htt">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://raw.githubusercontent.com/hulog/hulog.github.io/blog/source/images/post/tcpdump_format.jpg">
+<meta property="og:updated_time" content="2019-06-22T11:54:08.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="一次因TCP挥手导致的HTTP请求异常">
+<meta name="twitter:description" content="线上业务需要http需要和多个上游交互，使用httpclient包装的请求类，通过日志扫描系统的异常（grep），发现到达某个上游的请求，每天都会有几次异常，导致请求失败，同时抛出 NoHTTPResponseException！通过Apache官方文档，目测是因为服务端过于拥挤导致连接未响应，直接被丢弃了，后经询问，服务器此时的QPS并不高 因为是服务器之前频繁的通信，所以最好使用长连接，htt">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/hulog/hulog.github.io/blog/source/images/post/tcpdump_format.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 6323165598658332000,
+      author: '博主大大'
+    }
+  };
+</script>
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/06/22/一次因TCP挥手导致的HTTP请求异常.html">
+
+  <title> 一次因TCP挥手导致的HTTP请求异常 | Norman | 技术博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?f26c2b39087533cee5e3181bc162b001";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=58133089";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <div style="display: none;">
+    <script src="http://s95.cnzz.com/z_stat.php?id=1260231882&web_id=1260231882" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Norman | 技术博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">荟萃，探索，蓄力，拼搏</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                一次因TCP挥手导致的HTTP请求异常
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2019-06-22T19:39:57+08:00" content="2019-06-22">
+              2019-06-22
+            </time>
+          </span>
+
+          
+            <span class="post-category">
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/http/" itemprop="url" rel="index">
+                    <span itemprop="name">http</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2019/06/22/一次因TCP挥手导致的HTTP请求异常.html#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2019/06/22/一次因TCP挥手导致的HTTP请求异常.html" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+              &nbsp; | &nbsp;
+              <span class="page-pv"><i class="fa fa-file-o"></i>
+              <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+              </span>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>线上业务需要http需要和多个上游交互，使用httpclient包装的请求类，通过日志扫描系统的异常（grep），发现到达某个上游的请求，每天都会有几次异常，导致请求失败，同时抛出 <code>NoHTTPResponseException</code>！<br>通过Apache官方文档，目测是因为服务端过于拥挤导致连接未响应，直接被丢弃了，后经询问，服务器此时的QPS并不高</p>
+<p>因为是服务器之前频繁的通信，所以最好使用长连接，http层加入keepalive机制。我们把httpclient的keepalive的时间设置成30秒，不过后面依然会出现，必定是另有原因。</p>
+<a id="more"></a>
+<p>通过Linux的tcpdump，我们抓取指定上游的tcp报文，当再次出现异常时，我们通过时间从dump的日志中有了实质性的发现</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 假定上游服务器地址: 11.22.33.44</span><br><span class="line"><span class="meta">#</span> dump本机和指定主机交互的所有流量</span><br><span class="line">nohup tcpdump -i eth0 host 11.22.33.44  -nnn  &amp;</span><br></pre></td></tr></table></figure>
+<p>dump下来的日志，格式如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">11:29:43.939417 IP 11.22.33.44.8211 &gt; 172.19.0.1.59024: Flags [P.], seq 2506:2511, ack 4122, win 78, length 5</span><br><span class="line">11:29:43.939424 IP 172.19.0.1.59024 &gt; 11.22.33.44.8211: Flags [.], ack 2511, win 312, length 0</span><br><span class="line">11:29:43.941362 IP 11.22.33.44.8211 &gt; 172.19.0.1.59046: Flags [.], ack 411, win 60, length 0</span><br><span class="line">11:29:44.891319 IP 11.22.33.44.8211 &gt; 172.19.0.1.59046: Flags [P.], seq 1:247, ack 411, win 60, length 246</span><br><span class="line">11:29:44.891384 IP 172.19.0.1.59046 &gt; 11.22.33.44.8211: Flags [.], ack 247, win 237, length 0</span><br><span class="line">11:29:44.891322 IP 11.22.33.44.8211 &gt; 172.19.0.1.59046: Flags [P.], seq 247:252, ack 411, win 60, length 5</span><br><span class="line">11:29:44.891396 IP 172.19.0.1.59046 &gt; 11.22.33.44.8211: Flags [.], ack 252, win 237, length 0</span><br><span class="line">11:29:50.007828 IP 172.19.0.1.59046 &gt; 11.22.33.44.8211: Flags [P.], seq 411:824, ack 252, win 237, length 413</span><br><span class="line">11:29:50.030832 IP 11.22.33.44.8211 &gt; 172.19.0.1.59046: Flags [.], ack 824, win 62, length 0</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>题外话：日志中发现，我们有很多端口和 8211 进行交互，也就是意味着有多个tcp连接</p>
+</blockquote>
+<p>通过监控，我们发现异常出现在11:43:53.21出现了问题，在这个时间点附近的日志如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">11:43:38.215638 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 749:754, ack 1240, win 64, length 5</span><br><span class="line">11:43:38.215669 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 754, win 254, length 0</span><br><span class="line">11:43:52.898135 IP 11.22.33.44.8211 &gt; 172.19.0.1.59614: Flags [F.], seq 252, ack 414, win 60, length 0</span><br><span class="line">11:43:52.936947 IP 172.19.0.1.59614 &gt; 11.22.33.44.8211: Flags [.], ack 253, win 237, length 0</span><br><span class="line">11:43:53.212664 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [P.], seq 1240:1650, ack 754, win 254, length 410</span><br><span class="line">11:43:53.215228 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [F.], seq 754, ack 1240, win 64, length 0</span><br><span class="line">11:43:53.215294 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [F.], seq 1650, ack 755, win 254, length 0</span><br><span class="line">11:43:53.235410 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [R], seq 1246386853, win 0, length 0</span><br><span class="line">11:43:53.238071 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [R], seq 1246386854, win 0, length 0</span><br><span class="line">11:43:54.747270 IP 172.19.0.1.59614 &gt; 11.22.33.44.8211: Flags [F.], seq 414, ack 253, win 237, length 0</span><br><span class="line">11:43:54.747378 IP 172.19.0.1.59622 &gt; 11.22.33.44.8211: Flags [S], seq 2657401300, win 29200, options [mss 1460,sackOK,TS val 3040913527 ecr 0,nop,wscale 7], length 0</span><br></pre></td></tr></table></figure></p>
+<p>基本可以确定是本地端口 <strong>59602</strong> 和远程 <strong>8211</strong> 建立的这条tcp连接<br>在日志中通过端口号 59602 把所有的tcpdump信息全部取出，得到：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">11:43:20.822142 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [S], seq 921702317, win 29200, options [mss 1460,sackOK,TS val 3040905046 ecr 0,nop,wscale 7], length 0</span><br><span class="line">11:43:20.844940 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [S.], seq 1246386099, ack 921702318, win 29200, options [mss 1444,nop,nop,sackOK,nop,wscale 9], length 0</span><br><span class="line">11:43:20.844966 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 1, win 229, length 0</span><br><span class="line">11:43:20.845028 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [P.], seq 1:414, ack 1, win 229, length 413</span><br><span class="line">11:43:20.867813 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [.], ack 414, win 60, length 0</span><br><span class="line">11:43:23.053412 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 1:247, ack 414, win 60, length 246</span><br><span class="line">11:43:23.053461 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 247, win 237, length 0</span><br><span class="line">11:43:23.053415 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 247:252, ack 414, win 60, length 5</span><br><span class="line">11:43:23.053473 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 252, win 237, length 0</span><br><span class="line">11:43:23.364308 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [P.], seq 414:827, ack 252, win 237, length 413</span><br><span class="line">11:43:23.387087 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [.], ack 827, win 62, length 0</span><br><span class="line">11:43:23.873071 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 252:498, ack 827, win 62, length 246</span><br><span class="line">11:43:23.873112 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 498, win 245, length 0</span><br><span class="line">11:43:23.873074 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 498:503, ack 827, win 62, length 5</span><br><span class="line">11:43:23.873122 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 503, win 245, length 0</span><br><span class="line">11:43:36.883015 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [P.], seq 827:1240, ack 503, win 245, length 413</span><br><span class="line">11:43:36.905781 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [.], ack 1240, win 64, length 0</span><br><span class="line">11:43:38.215636 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 503:749, ack 1240, win 64, length 246</span><br><span class="line">11:43:38.215662 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 749, win 254, length 0</span><br><span class="line">11:43:38.215638 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [P.], seq 749:754, ack 1240, win 64, length 5</span><br><span class="line">11:43:38.215669 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [.], ack 754, win 254, length 0</span><br><span class="line">11:43:53.212664 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [P.], seq 1240:1650, ack 754, win 254, length 410</span><br><span class="line">11:43:53.215228 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [F.], seq 754, ack 1240, win 64, length 0</span><br><span class="line">11:43:53.215294 IP 172.19.0.1.59602 &gt; 11.22.33.44.8211: Flags [F.], seq 1650, ack 755, win 254, length 0</span><br><span class="line">11:43:53.235410 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [R], seq 1246386853, win 0, length 0</span><br><span class="line">11:43:53.238071 IP 11.22.33.44.8211 &gt; 172.19.0.1.59602: Flags [R], seq 1246386854, win 0, length 0</span><br></pre></td></tr></table></figure></p>
+<p>文字可能不太直观，同时ip和端口不太适合阅读，所以替换成client和server，截了张图：<br><img src="https://raw.githubusercontent.com/hulog/hulog.github.io/blog/source/images/post/tcpdump_format.jpg" alt="tcpdumpFormatDisplay"></p>
+<p>为了不迷路，简单普及下tcpdump中flags的几个标志的意义：</p>
+<ol>
+<li><strong>S</strong>：SYN标志位=1的报文 用于握手建立连接时</li>
+<li><strong>P</strong>：PSH标志位=1的报文 用于发送业务数据时</li>
+<li><strong>F</strong>：FIN标志位=1的报文 用于挥手断开连接时</li>
+<li><strong>R</strong>：RST标志位=1的报文 用于重置异常连接时</li>
+<li><strong>.</strong>：ACK标志位=1的报文 用于确认收到消息时</li>
+</ol>
+<p>状态描述：</p>
+<ul>
+<li>第28行，第三次数据交换结束，client向server发送ack报文，本次http交互结束</li>
+<li>第31行，client第四次发起数据请求</li>
+<li>第32行，服务器发回一个FIN报文，表示要中断TCP连接</li>
+</ul>
+<p>问题：</p>
+<ol>
+<li>前3次数据交换没有问题，为什么在第4次发送数据后，居然立马收到FIN报文？</li>
+<li>28行和32行，时间差刚好15s，这个数字不像是随机的，应该是什么机制中设置的吧？</li>
+</ol>
+<p>释疑：</p>
+<ol>
+<li>FIN包的ack是1240，这是client上一交互环节发送的最后一个报文，应该是没有收到31行报文，应该是client和server几乎同时发送了PSH和FIN报文，client以为TCP没断就放心发送报文了！</li>
+<li>经核实，上游使用阿里云SLB负载均衡，长连接默认保持15秒，闲置15秒无数据交互就会主动断掉！同时，一般的服务器或反向代理也会有这个机制。同时也解释了为什么之前已经设置了30s的超时时间，依然会出现这种异常了，因为服务器说：<code>15秒 &lt; 30秒，老弟，我先断了喂 拜拜~</code></li>
+</ol>
+<p>那么，我们需要对httputil进行改造，使其能够支持失败请求重试，Apache的httpclient已经支持了，不过默认不重试，加上就好了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">httpClient = HttpClients.custom()</span><br><span class="line">        .setKeepAliveStrategy((response, context) -&gt; DEFAULT_KEEP_ALIVE_TIME)</span><br><span class="line">        .setRetryHandler(DefaultHttpRequestRetryHandler.INSTANCE)</span><br><span class="line">        .setConnectionManager(cm)</span><br><span class="line">        .build();</span><br></pre></td></tr></table></figure>
+<p>如需定制化重试机制，实现HttpRequestRetryHandler即可，<a href="http://hc.apache.org/httpcomponents-client-4.5.x/tutorial/html/fundamentals.html#d5e316" target="_blank" rel="noopener">官网示例连接</a></p>
+<p>在最后，热心的同事提到，如果网络时延15ms，15秒的keepalive timeout，则这种异常出现的几率是 <code>15 ÷ 15000 = 1‰</code>，也不知道对不对，统计了下，好像差不多，哈哈</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/uploads/wechat-qcode.jpg" alt="Norman wechat" style="width: 200px; max-width: 100%;">
+    <div>欢迎您扫一扫上面的微信公众号，订阅我的博客！</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>坚持原创技术分享，您的支持将鼓励我继续写作！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wx.jpg" alt="Norman WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/zfb-sm.png" alt="Norman Alipay">
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Socket/" rel="tag"><i class="fa fa-tag"></i>Socket</a>
+          
+            <a href="/tags/tcp/" rel="tag"><i class="fa fa-tag"></i>tcp</a>
+          
+            <a href="/tags/tcpdump/" rel="tag"><i class="fa fa-tag"></i>tcpdump</a>
+          
+            <a href="/tags/http/" rel="tag"><i class="fa fa-tag"></i>http</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/23/es-index-reindex.html" rel="next" title="EleasticSearch 线上大索引按日期分割">
+                <i class="fa fa-chevron-left"></i> EleasticSearch 线上大索引按日期分割
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2019/06/22/一次因TCP挥手导致的HTTP请求异常.html" data-title="一次因TCP挥手导致的HTTP请求异常" data-url="http://yoursite.com/2019/06/22/一次因TCP挥手导致的HTTP请求异常.html">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="Norman">
+          <p class="site-author-name" itemprop="name">Norman</p>
+          <p class="site-description motion-element" itemprop="description">一个有思想的程序员</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/hulog/" target="_blank" title="github">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  github
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/normanjiangnan/" target="_blank" title="weibo">
+                  
+                    <i class="fa fa-fw fa-weibo"></i>
+                  
+                  weibo
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.jiangnan.edu.cn/" title="江南大学" target="_blank">江南大学</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.lixiaolin.me/" title="lixiaolin" target="_blank">lixiaolin</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.codertian.com/" title="codertian" target="_blank">codertian</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://blog.csdn.net/jthink_" title="JThink" target="_blank">JThink</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <p class="post-toc-empty">此文章未包含目录</p>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Norman</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+        
+
+<div class="busuanzi-count">
+
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv"><i class="fa fa-user"></i><span class="busuanzi-value" id="busuanzi_value_site_uv"></span></span>
+  
+
+  
+    <span class="site-pv"><i class="fa fa-eye"></i><span class="busuanzi-value" id="busuanzi_value_site_pv"></span></span>
+  
+  
+</div>
+
+
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"hulong"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsById('footer')
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    <script src="/vendors/ua-parser-js/dist/ua-parser.min.js?v=0.7.9"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,860 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+      
+    
+
+    
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Lobster Two:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="es,大索引拆分,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Norman | 技术博客" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1">
+
+
+
+
+
+
+<meta name="description" content="1. 背景由于项目初期设计问题，采集到es的业务日志只使用了一个索引(index)，随着线上日志量的增长，es很快飙升到磁盘警戒线，线上找了一圈，很多文章版本都比较老旧，最终直接啃官方文档得出，没有copy别人博客，如果你中途不走神，本文总共15min。version 适用于es 6.0+">
+<meta name="keywords" content="es,大索引拆分">
+<meta property="og:type" content="article">
+<meta property="og:title" content="EleasticSearch 线上大索引按日期分割">
+<meta property="og:url" content="http://yoursite.com/2019/04/23/es-index-reindex.html">
+<meta property="og:site_name" content="Norman | 技术博客">
+<meta property="og:description" content="1. 背景由于项目初期设计问题，采集到es的业务日志只使用了一个索引(index)，随着线上日志量的增长，es很快飙升到磁盘警戒线，线上找了一圈，很多文章版本都比较老旧，最终直接啃官方文档得出，没有copy别人博客，如果你中途不走神，本文总共15min。version 适用于es 6.0+">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://github.com/hulog/hulog.github.io/blob/blog/source/images/post/es-index-reindex.jpg?raw=true">
+<meta property="og:updated_time" content="2019-06-22T11:37:16.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="EleasticSearch 线上大索引按日期分割">
+<meta name="twitter:description" content="1. 背景由于项目初期设计问题，采集到es的业务日志只使用了一个索引(index)，随着线上日志量的增长，es很快飙升到磁盘警戒线，线上找了一圈，很多文章版本都比较老旧，最终直接啃官方文档得出，没有copy别人博客，如果你中途不走神，本文总共15min。version 适用于es 6.0+">
+<meta name="twitter:image" content="https://github.com/hulog/hulog.github.io/blob/blog/source/images/post/es-index-reindex.jpg?raw=true">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 6323165598658332000,
+      author: '博主大大'
+    }
+  };
+</script>
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/04/23/es-index-re">
+
+  <title> EleasticSearch 线上大索引按日期分割 | Norman | 技术博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?f26c2b39087533cee5e3181bc162b001";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=58133089";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <div style="display: none;">
+    <script src="http://s95.cnzz.com/z_stat.php?id=1260231882&web_id=1260231882" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Norman | 技术博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">荟萃，探索，蓄力，拼搏</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                EleasticSearch 线上大索引按日期分割
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2019-04-23T16:03:54+08:00" content="2019-04-23">
+              2019-04-23
+            </time>
+          </span>
+
+          
+            <span class="post-category">
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/ElasticSearch/" itemprop="url" rel="index">
+                    <span itemprop="name">ElasticSearch</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2019/04/23/es-index-reindex.html#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2019/04/23/es-index-reindex.html" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+              &nbsp; | &nbsp;
+              <span class="page-pv"><i class="fa fa-file-o"></i>
+              <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+              </span>
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h2><p>由于项目初期设计问题，采集到es的业务日志只使用了一个索引(index)，随着线上日志量的增长，es很快飙升到磁盘警戒线，线上找了一圈，很多文章版本都比较老旧，最终直接啃官方文档得出，没有copy别人博客，如果你中途不走神，本文总共15min。version 适用于es 6.0+</p>
+<a id="more"></a>
+<p>本文前提保障：</p>
+<ol>
+<li>文档中有时间字段，方便按日期切割</li>
+<li>index的<code>mapping</code>配置中，<code>_source</code>需为 <code>true</code>（默认），以保证es存入了源文档，而不仅仅是docId<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -XGET "localhost:9200/your_index_name/_mapping"</span><br><span class="line"><span class="meta">#</span> 如果没有显示 _source, 代表"_source": false</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="2-删文档（不建议）"><a href="#2-删文档（不建议）" class="headerlink" title="2. 删文档（不建议）"></a>2. 删文档（不建议）</h2><p>这第一个想到的方法，将最老旧的日志删掉，如只保留近3个月的，采用 <code>delete_by_query</code> 接口<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST "localhost:9200/twitter/_delete_by_query" -H 'Content-Type: application/json' -d'</span><br><span class="line">&#123;</span><br><span class="line">  "query": &#123;</span><br><span class="line">    "range" : &#123;</span><br><span class="line">        "day" : &#123;</span><br><span class="line">           "lt" : "2018-12-01"</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">'</span><br></pre></td></tr></table></figure></p>
+<p>但是，es的delete，并不是真正的物理删，磁盘使用率(utilization)并不会下降。删除的文档仅仅被标记，es将文档存入一个个segment file中，其file数量随着文档的写入不断增加，es因此会有合并segment file的操作，将多个小的segment合并成一个大的segment file，当segment合并的时候，标记的文档才会真正的物理删除。</p>
+<p>这种方案，只适合在 <strong>项目早期、文档量少、且机器负载不高</strong> 情况下进行，因为批量读写会导致cpu utilization的飙升，造成系统负载加重，可以在晚上业务量不高的时候进行</p>
+<h2 id="3-磁盘扩容-短期有效"><a href="#3-磁盘扩容-短期有效" class="headerlink" title="3. 磁盘扩容 (短期有效)"></a>3. 磁盘扩容 (短期有效)</h2><p>那如果标记删除不能立即解决问题，那就对磁盘扩容吧！1T 到 2T，2T 到 4T，由于升级磁盘需要重启机器，所以，如何做到优雅滚动关停es至关重要！</p>
+<h3 id="3-1-停止es集群服务"><a href="#3-1-停止es集群服务" class="headerlink" title="3.1 停止es集群服务"></a>3.1 停止es集群服务</h3><p>常见就是<code>ps</code>看一下es的进程，然后<code>kill</code>，先等一下！在此之前，需对集群进行配置，方便更加快速的服务重启</p>
+<h4 id="3-1-1-停止分片分配"><a href="#3-1-1-停止分片分配" class="headerlink" title="3.1.1 停止分片分配"></a>3.1.1 停止分片分配</h4><p>由于es中的index是分布式存储，所以一个index分成了多个shard，分布在各个节点node上，每个shard都可以单独提供服务，同时每个shard可以配置多个副本(replicas)，保证集群的高可用，提高了查询效率。同时，es在管理这些分片时，有一套自有的均衡算法，保证shard均匀分散在各个node上，同时保证每个shard和其对应的replica不在同一node上。正是这种机制，使得当node离开和重新加入的时候，分片的分配会copy文件，会造成大量的io，因为node重启很快就回来，所以暂时关掉自动分片分配，详情参见另一篇文章，介绍集群重启步骤。这里选择直接停止分配</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">curl -X PUT "localhost:9200/_cluster/settings" -H 'Content-Type: application/json' -d'</span><br><span class="line">&#123;</span><br><span class="line">  "persistent": &#123;</span><br><span class="line">    "cluster.routing.allocation.enable": "none"</span><br><span class="line">  &#125;</span><br><span class="line">&#125;'</span><br></pre></td></tr></table></figure>
+<p>这样，在node停掉的时候，不会出现分片分配重新均衡了。</p>
+<h4 id="3-1-2-挂载新盘"><a href="#3-1-2-挂载新盘" class="headerlink" title="3.1.2 挂载新盘"></a>3.1.2 挂载新盘</h4><p>由于机器是云上资源，因此按照各个云上的扩容文档操作即可，无论是自有机房还是云上机器，无非是下面几个步骤：</p>
+<ol start="0">
+<li><code>reboot</code>重启</li>
+<li><code>df -h</code> 看一下现在的挂载点（如/dev/vdb）和 挂载路径(如/data/es/)</li>
+<li><code>fdisk -l</code> 可以进一步确认盘的信息</li>
+<li><code>fdisk /dev/vdb</code>，对新盘进行重新挂载，命令中可能涉及到的选项，不分区的话，大部分按回车默认选项：d n p 1 wq</li>
+<li><p>其他操作 如<code>e2fsck -f /dev/vdb</code>,<code>resize2fs /dev/vdb</code></p>
+</li>
+<li><p><code>mount /dev/vdb /data</code> 重新挂载即可</p>
+</li>
+</ol>
+<h4 id="3-1-3-恢复分配分配"><a href="#3-1-3-恢复分配分配" class="headerlink" title="3.1.3 恢复分配分配"></a>3.1.3 恢复分配分配</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">curl -X PUT "localhost:9200/_cluster/settings" -H 'Content-Type: application/json' -d'</span><br><span class="line">&#123;</span><br><span class="line">  "transient": &#123;</span><br><span class="line">    "cluster.routing.allocation.enable": "all"</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">'</span><br></pre></td></tr></table></figure>
+<p>这一步，会有部分io，等到recovery结束，集群恢复正常。如果有 <strong>Unassigned</strong> 状态的shard，需要手动执行分片分配，对应的命令<code>reroute</code>，这个不难，正常情况下，几乎不会出现 <strong>Unassigned</strong> 的shard。<br>执行完上述操作，磁盘体积翻倍。在短期内，可以保证服务正常。</p>
+<h2 id="4-索引拆分-最佳实践"><a href="#4-索引拆分-最佳实践" class="headerlink" title="4. 索引拆分(最佳实践)"></a>4. 索引拆分(最佳实践)</h2><p>无论标记删除，还是磁盘扩容，都没有真正的解决索引过大的问题，随着文档数的增加，索引势必会变得更大。针对大索引，标记删除以及扩容后分片恢复的操作时间，也会大幅增加，可能会从几小时到一两天。上述方法不可行！</p>
+<p>因为es对index的删除是物理删除，是立即的，既然不能直接删除原索引，得想办法把大索引拆成小索引，然后再删除老旧的。那么es有么有这种api，将大的索引按照某种条件(按天、按月)进行拆分呢？为此，我找了很多博客，最后发现，很多博客里介绍的api都很老旧，还是官网的文档最实在，文档是英文，不过理解起来并不复杂。墙裂推荐看官方文档。为此，我调研了这些api：<code>_rollover</code>，<code>alias</code>，<code>template</code>，<code>reindex</code>，大家可以有针对的深入学习这几个api，细节这里就不讲了，先看我怎么用的吧~</p>
+<h3 id="4-1-错误尝试"><a href="#4-1-错误尝试" class="headerlink" title="4.1. 错误尝试"></a>4.1. 错误尝试</h3><p><code>_rollover</code> 当看到这个api时，我以为找到了最接近需求的api，这个api介绍如下</p>
+<blockquote>
+<p>The rollover index API rolls an alias over to a new index when the existing index is considered to be too large or too old.</p>
+</blockquote>
+<p>显然被 <strong>too large</strong> 和 <strong>too old</strong> 吸引了。。。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">curl -X PUT "localhost:9200/logs-000001" -H 'Content-Type: application/json' -d'</span><br><span class="line">&#123;</span><br><span class="line">  "aliases": &#123;</span><br><span class="line">    "logs_write": &#123;&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">'</span><br><span class="line"><span class="meta">#</span> Add &gt; 1000 documents to logs-000001</span><br><span class="line">curl -X POST "localhost:9200/logs_write/_rollover" -H 'Content-Type: application/json' -d'</span><br><span class="line">&#123;</span><br><span class="line">  "conditions": &#123;</span><br><span class="line">    "max_age":   "7d", #当文档创建时间大于7天</span><br><span class="line">    "max_docs":  1000, #当文档数量超过上限1000</span><br><span class="line">    "max_size":  "5gb" #当索引大小超过5GB</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">'</span><br></pre></td></tr></table></figure>
+<p><strong>思路：</strong></p>
+<p>先给 <em>index</em> 建一个别名 <em>alias</em>，再 <code>rollover</code>，当执行时，满足任一个条件即可创建新索引，同时别名 <em>alias</em> 指向新的，除此之外，<code>_rollover</code>还可以按日期生成新索引</p>
+<p><strong>问题：</strong></p>
+<ol>
+<li>拆分只在api执行时生效，后面不会自动拆分，如果按天索引，则必须每天定时执行，增加维护成本，如果定时任务失败…</li>
+<li>当别名滚向新的索引后，旧索引不能通过 <em>alias</em> 再访问</li>
+<li>并没有将历史的索引按天生成，只是在此api执行后，新文档才会进新index</li>
+</ol>
+<h3 id="4-2-最佳实践"><a href="#4-2-最佳实践" class="headerlink" title="4.2 最佳实践"></a>4.2 最佳实践</h3><p>假设原索引name <strong>knight-log</strong>，当前月份 <strong>2019-02</strong></p>
+<p><img src="https://github.com/hulog/hulog.github.io/blob/blog/source/images/post/es-index-reindex.jpg?raw=true" alt="es-索引拆分思路"></p>
+<p><strong>思路：</strong></p>
+<ol>
+<li>创建别名alias：<strong>alias-knight-log</strong></li>
+<li>为旧的 <em>knight-log</em> 关联别名 <strong>alias-knight-log</strong></li>
+<li>创建索引模板template: <strong>template-knight-log</strong>，该模板匹配所有 <code>knight-log.*</code> 索引,在模板中定义settings和mappings，以及自动关联别名 alias-knight-log</li>
+</ol>
+<p>此外，将项目中读写es的操作分别设置：</p>
+<ol>
+<li>读 <em>alias-knight-log</em>，可以查询所有关联索引</li>
+<li>写 <em>knight-log.2019-02</em>，在原索引后append月份即可！调用Java api进行索引时，接口规定每条文档需要指定index name，因此将原来的 <em>name</em> 变为 <em>name + current_month</em> 即可，其他语言同理！</li>
+</ol>
+<p>更新业务代码，重新上线后，新文档会进入到形如 <strong>knight-log.2019-02</strong> 的索引中，原 <em>knight-log</em> 将不会有写请求，读请求也经过别名 <em>alias-knight-log</em> 代理了</p>
+<p>经过上述步骤，旧的index只读不写，写请求全部进入 <strong>knight-log.2019-02</strong> 的索引中，保障了这一点，我们就可以对 <em>knight-log</em> 按时间粒度以大化小，逐个删除了！</p>
+<p>Sad，没有这种直接的api，不过，不起眼的<code>reindex</code>却承担起这个重任，一开始我觉得跟这个api应该没有关系，不仅不省空间，反而还翻倍，直到发现可以按条件reindex后，眼前一亮！我按时间条件reindex不就好了嘛~~</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 将 2019-01 月的文档, 全部 reindex 到 knight-log.2019-01 中</span><br><span class="line">curl -X POST "localhost:9200/_reindex" -H 'Content-Type: application/json' -d'</span><br><span class="line">&#123;</span><br><span class="line">  "source": &#123;</span><br><span class="line">    "index": "knight-log",</span><br><span class="line">    "type": "your_doc_type",</span><br><span class="line">    "query": &#123;</span><br><span class="line">      "bool": &#123;</span><br><span class="line">        "filter": &#123;</span><br><span class="line">          "range": &#123;</span><br><span class="line">            "day": &#123;</span><br><span class="line">              "gte": "2019-01-01",</span><br><span class="line">              "lt": "2019-02-01"</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  "dest": &#123;</span><br><span class="line">    "index": "knight-log.2019-01"</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">'</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>tips1: 在reindex到新index之前，为了加快索引，可以对新index设置，常规的批量索引设置注意项，这里也适用,如：replicas=0，refresh_interval=-1</p>
+</blockquote>
+<blockquote>
+<p>tips2：第一次使用reindex，没有开启slice(相当于多线程)，io和cpu虽然都不高，但很慢，可适当开启，但注意slice不要超过index的shard数，看官方文档，此处不多提！</p>
+</blockquote>
+<blockquote>
+<p>tips3：如果一个月的文档数太多，不放心一次性操作，你可以尝试先按天reindex到新月份index中，这样可以观察cup和io，然后适当调整reindex相关参数后，再把当月余下天数的文档全部reindex到新index中</p>
+</blockquote>
+<blockquote>
+<p>tips4：当进行完一次reindex，恢复 refresh_interval 后，可以对新旧索引同时查询，看文档数是否一致！确保无异常！</p>
+</blockquote>
+<blockquote>
+<p>tips5：手误执行reindex，可以中途取消本次task</p>
+</blockquote>
+<p>将 <em>knight-log</em> 的replicas数从默认的1 变为 0，这样整个index省掉一半大小（非必须，剩余磁盘多可以忽略），然后，对 <em>knight-log</em> 按月份进行reindex，这样反复操作几次，可完成近几月的备份，形如 <em>knight-log.2019-01</em>，<em>knight-log.2018-12</em> 等（不要忘记2月的旧文档哦，同样需要reindex，这样2月的index才会完整），同时因为模板的特性，月份索引会自动加上 <strong>alias-knight-log</strong> 这个别名，一举两得!</p>
+<p>reindex完必要的数据后（如近3月），就可以直接删掉 <em>knight-log</em>！</p>
+<p>若几个月后，磁盘又满了，就可以将最久老月份的index直接物理删除，方便快捷！</p>
+<h2 id="5-总结"><a href="#5-总结" class="headerlink" title="5. 总结"></a>5. 总结</h2><p>追根究底，这种问题就不应该存在！可能一开始使用es不熟吧，起码按天/月索引是应该具备的基本sense吧，大家要避免这个坑！</p>
+<p>其次，如果单条文档体积较大，可以考虑将数据存入HBase，es中只存docId即可，通过条件搜出对应的docId，然后用docId去HBase取数据，进一步高效利用es，这通过禁用<code>_source</code>字段(保存原文档的json字段)实现。不过，因为es只存倒排索引，所以没了原文档，会缺失部分便捷性，慎重考虑！</p>
+<p>说回来，es不支持将大的索引按时间拆分成小索引，只能在多个api组合中找到最优实践，对应用来说，需要改动索引名后重启，已经是最小化改动，在整个过程中，es保障了正常提供服务，不影响其他业务。<br>经历过上述操作，更加熟练的掌握了es多个相关api，了解查询原理，写入原理，分片分配策略以及查询语句优化等知识点。另: kibana下使用dev tools也非常爽，会弹提示，算是发现的彩蛋，建议多用！</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+<div id="wechat_subscriber" style="display: block; padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
+    <img id="wechat_subscriber_qcode" src="/uploads/wechat-qcode.jpg" alt="Norman wechat" style="width: 200px; max-width: 100%;">
+    <div>欢迎您扫一扫上面的微信公众号，订阅我的博客！</div>
+</div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>坚持原创技术分享，您的支持将鼓励我继续写作！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/wx.jpg" alt="Norman WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/zfb-sm.png" alt="Norman Alipay">
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/es/" rel="tag"><i class="fa fa-tag"></i>es</a>
+          
+            <a href="/tags/大索引拆分/" rel="tag"><i class="fa fa-tag"></i>大索引拆分</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/12/08/deep-in-threadlocal.html" rel="next" title="揭开神秘面纱——深入浅出ThreadLocal">
+                <i class="fa fa-chevron-left"></i> 揭开神秘面纱——深入浅出ThreadLocal
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/22/一次因TCP挥手导致的HTTP请求异常.html" rel="prev" title="一次因TCP挥手导致的HTTP请求异常">
+                一次因TCP挥手导致的HTTP请求异常 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+  <p>热评文章</p>
+  <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2019/04/23/es-index-reindex.html" data-title="EleasticSearch 线上大索引按日期分割" data-url="http://yoursite.com/2019/04/23/es-index-reindex.html">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="Norman">
+          <p class="site-author-name" itemprop="name">Norman</p>
+          <p class="site-description motion-element" itemprop="description">一个有思想的程序员</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">21</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/hulog/" target="_blank" title="github">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  github
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/normanjiangnan/" target="_blank" title="weibo">
+                  
+                    <i class="fa fa-fw fa-weibo"></i>
+                  
+                  weibo
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.jiangnan.edu.cn/" title="江南大学" target="_blank">江南大学</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.lixiaolin.me/" title="lixiaolin" target="_blank">lixiaolin</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.codertian.com/" title="codertian" target="_blank">codertian</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://blog.csdn.net/jthink_" title="JThink" target="_blank">JThink</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-背景"><span class="nav-number">1.</span> <span class="nav-text">1. 背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-删文档（不建议）"><span class="nav-number">2.</span> <span class="nav-text">2. 删文档（不建议）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-磁盘扩容-短期有效"><span class="nav-number">3.</span> <span class="nav-text">3. 磁盘扩容 (短期有效)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-停止es集群服务"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 停止es集群服务</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-1-停止分片分配"><span class="nav-number">3.1.1.</span> <span class="nav-text">3.1.1 停止分片分配</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-2-挂载新盘"><span class="nav-number">3.1.2.</span> <span class="nav-text">3.1.2 挂载新盘</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-3-恢复分配分配"><span class="nav-number">3.1.3.</span> <span class="nav-text">3.1.3 恢复分配分配</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-索引拆分-最佳实践"><span class="nav-number">4.</span> <span class="nav-text">4. 索引拆分(最佳实践)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-错误尝试"><span class="nav-number">4.1.</span> <span class="nav-text">4.1. 错误尝试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-最佳实践"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 最佳实践</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-总结"><span class="nav-number">5.</span> <span class="nav-text">5. 总结</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Norman</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+        
+
+<div class="busuanzi-count">
+
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv"><i class="fa fa-user"></i><span class="busuanzi-value" id="busuanzi_value_site_uv"></span></span>
+  
+
+  
+    <span class="site-pv"><i class="fa fa-eye"></i><span class="busuanzi-value" id="busuanzi_value_site_pv"></span></span>
+  
+  
+</div>
+
+
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"hulong"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsById('footer')
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    <script src="/vendors/ua-parser-js/dist/ua-parser.min.js?v=0.7.9"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
